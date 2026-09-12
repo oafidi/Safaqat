@@ -104,6 +104,131 @@ class MatchingTests(unittest.TestCase):
         self.assertEqual(data["PRADO_POSTBACK_PARAMETER"], "undefined")
         self.assertNotIn("validate", data)
 
+    def test_complete_download_form_targets_the_archive_control(self) -> None:
+        page = """
+        <form name="main_form" action="/index.php?page=dce">
+          <input type="hidden" name="PRADO_PAGESTATE" value="state">
+          <input type="hidden" name="PRADO_POSTBACK_TARGET" value="">
+          <a id="ctl0_CONTENU_PAGE_EntrepriseDownloadDce_completeDownload"
+             href="javascript:;">Telecharger</a>
+        </form>
+        """
+        action, data = main.complete_download_form(
+            page,
+            "https://www.marchespublics.gov.ma/form",
+        )
+        self.assertEqual(
+            action,
+            "https://www.marchespublics.gov.ma/index.php?page=dce",
+        )
+        self.assertEqual(data["PRADO_PAGESTATE"], "state")
+        self.assertEqual(
+            data["PRADO_POSTBACK_TARGET"],
+            "ctl0$CONTENU_PAGE$EntrepriseDownloadDce$completeDownload",
+        )
+        self.assertEqual(data["PRADO_POSTBACK_PARAMETER"], "")
+
+    def test_complete_download_form_requires_the_archive_control(self) -> None:
+        with self.assertRaises(ValueError):
+            main.complete_download_form(
+                '<form name="main_form" action="/index.php"></form>',
+                "https://www.marchespublics.gov.ma/form",
+            )
+
+    def test_anonymous_archive_follows_the_confirmation_postback(self) -> None:
+        portal = "https://www.marchespublics.gov.ma"
+        request_form_page = f"""
+        <form action="{portal}/download">
+          <input id="ctl0_CONTENU_PAGE_EntrepriseFormulaireDemande_choixAnonyme"
+                 type="radio" name="mode" value="anonymous">
+          <input id="ctl0_CONTENU_PAGE_EntrepriseFormulaireDemande_accepterConditions"
+                 type="checkbox" name="terms">
+          <input id="ctl0_CONTENU_PAGE_validateButton"
+                 type="submit" name="validate" value="Valider">
+        </form>
+        """
+        confirmation_page = f"""
+        <form name="main_form" action="{portal}/download">
+          <input type="hidden" name="PRADO_PAGESTATE" value="state">
+          <a id="ctl0_CONTENU_PAGE_EntrepriseDownloadDce_completeDownload"
+             href="javascript:;">Telecharger</a>
+        </form>
+        """
+        archive_bytes = b"PK\x03\x04 archive"
+
+        def response(url: str, content: bytes, media_type: str) -> httpx.Response:
+            return httpx.Response(
+                200,
+                headers={"content-type": media_type},
+                content=content,
+                request=httpx.Request("POST", url),
+            )
+
+        responses = [
+            response(
+                f"{portal}/form",
+                request_form_page.encode(),
+                "text/html;charset=utf-8",
+            ),
+            response(
+                f"{portal}/download",
+                confirmation_page.encode(),
+                "text/html;charset=utf-8",
+            ),
+            response(f"{portal}/download", archive_bytes, "application/zip"),
+        ]
+        calls: list[dict] = []
+
+        def fake_request(url, method="GET", **options):
+            calls.append({"url": url, "method": method, "data": options.get("data")})
+            return responses.pop(0)
+
+        with patch.object(main, "portal_request", side_effect=fake_request):
+            archive, size = main.download_anonymous_archive(f"{portal}/form")
+
+        try:
+            self.assertEqual(archive.read(), archive_bytes)
+            self.assertEqual(size, len(archive_bytes))
+        finally:
+            archive.close()
+        self.assertEqual([call["method"] for call in calls], ["GET", "POST", "POST"])
+        self.assertEqual(calls[1]["data"]["PRADO_POSTBACK_TARGET"], "validate")
+        self.assertEqual(
+            calls[2]["data"]["PRADO_POSTBACK_TARGET"],
+            "ctl0$CONTENU_PAGE$EntrepriseDownloadDce$completeDownload",
+        )
+
+    def test_anonymous_archive_rejects_a_non_archive_confirmation(self) -> None:
+        portal = "https://www.marchespublics.gov.ma"
+        request_form_page = f"""
+        <form action="{portal}/download">
+          <input id="ctl0_CONTENU_PAGE_EntrepriseFormulaireDemande_choixAnonyme"
+                 type="radio" name="mode" value="anonymous">
+          <input id="ctl0_CONTENU_PAGE_EntrepriseFormulaireDemande_accepterConditions"
+                 type="checkbox" name="terms">
+          <input id="ctl0_CONTENU_PAGE_validateButton"
+                 type="submit" name="validate" value="Valider">
+        </form>
+        """
+        responses = [
+            httpx.Response(
+                200,
+                headers={"content-type": "text/html"},
+                content=request_form_page.encode(),
+                request=httpx.Request("GET", f"{portal}/form"),
+            ),
+            httpx.Response(
+                200,
+                headers={"content-type": "text/html"},
+                content=b"<html><body>Identification requise</body></html>",
+                request=httpx.Request("POST", f"{portal}/download"),
+            ),
+        ]
+
+        with patch.object(main, "portal_request", side_effect=lambda *a, **k: responses.pop(0)):
+            with self.assertRaises(ValueError):
+                main.download_anonymous_archive(f"{portal}/form")
+
     def test_zip_archive_is_extracted_for_future_parsing(self) -> None:
         archive = io.BytesIO()
         with zipfile.ZipFile(archive, "w") as package:
@@ -245,6 +370,48 @@ class MatchingTests(unittest.TestCase):
             "/auth/profile",
             headers={"Authorization": "Bearer token"},
         )
+
+    def test_stale_auth_connection_is_retried_once(self) -> None:
+        enterprise = {
+            "id": str(uuid.uuid4()),
+            "keywords": ["route"],
+            "categories": ["travaux"],
+            "locations": ["casablanca"],
+            "portal_download_consent": True,
+        }
+        profile_response = httpx.Response(
+            200,
+            json={"enterprise": enterprise},
+            request=httpx.Request("GET", "http://auth:8000/auth/profile"),
+        )
+        client = Mock()
+        client.get.side_effect = [
+            httpx.RemoteProtocolError("Server disconnected without sending a response."),
+            profile_response,
+        ]
+
+        with patch.object(main, "auth_client", client):
+            profile = main.load_enterprise(
+                HTTPAuthorizationCredentials(
+                    scheme="Bearer",
+                    credentials="token",
+                )
+            )
+
+        self.assertEqual(profile["id"], enterprise["id"])
+        self.assertEqual(client.get.call_count, 2)
+
+    def test_auth_service_outage_still_reports_unavailable(self) -> None:
+        client = Mock()
+        client.get.side_effect = httpx.ConnectError("connection refused")
+
+        with patch.object(main, "auth_client", client):
+            with self.assertRaises(HTTPException) as raised:
+                main.load_enterprise(
+                    HTTPAuthorizationCredentials(scheme="Bearer", credentials="token")
+                )
+
+        self.assertEqual(raised.exception.status_code, 503)
 
     def test_location_filter_falls_back_to_category(self) -> None:
         profile = {

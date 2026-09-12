@@ -103,7 +103,17 @@ function fileTypeLabel(item) {
   if (item.media_type?.startsWith("text/")) return `Texte · ${formatSize(item.size)}`;
   if (item.file_type === "dossier") return "Dossier de consultation";
   if (item.file_type === "notice") return "Avis de publicité";
+  if (item.size !== undefined) {
+    const extension = String(item.name || "").split(".").pop();
+    return `${(extension && extension !== item.name ? extension : "Fichier").toUpperCase()} · ${formatSize(item.size)}`;
+  }
   return `${item.file_type || item.media_type || "Document"}`.toUpperCase();
+}
+
+function viewableType(contentType) {
+  return contentType === "application/pdf"
+    || contentType === "text/plain"
+    || contentType.startsWith("image/");
 }
 
 function formatSize(size) {
@@ -193,10 +203,12 @@ async function openDocument(item, button, extracted = false) {
     }
 
     const blob = await response.blob();
-    const contentType = response.headers.get("content-type") || blob.type;
-    if (contentType.includes("application/pdf") || contentType.startsWith("image/") || contentType.startsWith("text/")) {
+    const contentType = (response.headers.get("content-type") || blob.type || "").split(";")[0].trim().toLowerCase();
+    if (viewableType(contentType)) {
       if (viewerUrl) URL.revokeObjectURL(viewerUrl);
-      viewerUrl = URL.createObjectURL(blob);
+      // The frame renders same-origin, so the preview is pinned to the type we
+      // recognized instead of whatever the archive claimed the file was.
+      viewerUrl = URL.createObjectURL(new Blob([blob], { type: contentType }));
       elements.frame.src = viewerUrl;
       document.querySelector("#viewer-title").textContent = item.name;
       elements.viewer.hidden = false;

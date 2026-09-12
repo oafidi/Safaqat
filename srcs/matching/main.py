@@ -40,7 +40,19 @@ DOCUMENT_DOWNLOAD_RETRY_SECONDS = int(
 MAX_DOCUMENT_BYTES = int(os.getenv("MAX_DOCUMENT_MB", "25")) * 1024 * 1024
 MAX_ARCHIVE_BYTES = int(os.getenv("MAX_ARCHIVE_MB", "250")) * 1024 * 1024
 MAX_ARCHIVE_FILES = int(os.getenv("MAX_ARCHIVE_FILES", "500"))
+MAX_PORTAL_PAGE_BYTES = 8 * 1024 * 1024
 OFFER_FILES_DIR = Path(os.getenv("OFFER_FILES_DIR", "/app/data/offer_files"))
+
+# Python's mime database misses the formats the portal archives ship most often.
+for extension, media_type in {
+    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    ".rar": "application/vnd.rar",
+    ".7z": "application/x-7z-compressed",
+    ".dwg": "image/vnd.dwg",
+}.items():
+    mimetypes.add_type(media_type, extension)
 
 COLLECTION = "offers"
 DENSE_VECTOR = "dense"
@@ -491,11 +503,21 @@ def load_enterprise(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authentication required",
         )
+    headers = {"Authorization": f"Bearer {credentials.credentials}"}
     try:
-        response = auth_client.get(
-            "/auth/profile",
-            headers={"Authorization": f"Bearer {credentials.credentials}"},
-        )
+        response = auth_client.get("/auth/profile", headers=headers)
+    except httpx.RemoteProtocolError:
+        # A pooled connection the auth service already closed; the profile read
+        # is idempotent, so open a new one before giving up on the request.
+        logger.warning("Retrying auth profile read on a fresh connection")
+        try:
+            response = auth_client.get("/auth/profile", headers=headers)
+        except httpx.RequestError as error:
+            logger.exception("Could not reach auth service")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Enterprise profile is temporarily unavailable",
+            ) from error
     except httpx.RequestError as error:
         logger.exception("Could not reach auth service")
         raise HTTPException(
@@ -878,16 +900,14 @@ def buffer_document(first_chunk: bytes, iterator, max_bytes: int | None = None):
         raise
 
 
-def anonymous_download_form(page_html: str, page_url: str) -> tuple[str, dict]:
-    page = html.fromstring(page_html)
-    forms = page.xpath('//form[.//*[@id="ctl0_CONTENU_PAGE_validateButton"]]')
-    if not forms:
-        raise ValueError("The public portal download form was not found")
-    form = forms[0]
+def form_action(form, page_url: str) -> str:
     action = urljoin(page_url, form.get("action") or page_url)
     if not safe_portal_url(action):
         raise ValueError("The public portal form target is invalid")
+    return action
 
+
+def form_fields(form) -> dict[str, str]:
     data: dict[str, str] = {}
     for field in form.xpath(".//input | .//select | .//textarea"):
         name = field.get("name")
@@ -912,6 +932,17 @@ def anonymous_download_form(page_html: str, page_url: str) -> tuple[str, dict]:
                 data[name] = selected.get("value") or selected.text_content().strip()
         else:
             data[name] = field.text or ""
+    return data
+
+
+def anonymous_download_form(page_html: str, page_url: str) -> tuple[str, dict]:
+    page = html.fromstring(page_html)
+    forms = page.xpath('//form[.//*[@id="ctl0_CONTENU_PAGE_validateButton"]]')
+    if not forms:
+        raise ValueError("The public portal download form was not found")
+    form = forms[0]
+    action = form_action(form, page_url)
+    data = form_fields(form)
     anonymous = form.xpath(
         './/input[@id="ctl0_CONTENU_PAGE_EntrepriseFormulaireDemande_choixAnonyme"]'
     )
@@ -935,6 +966,43 @@ def anonymous_download_form(page_html: str, page_url: str) -> tuple[str, dict]:
     return action, data
 
 
+COMPLETE_DOWNLOAD_CONTROL = "ctl0$CONTENU_PAGE$EntrepriseDownloadDce$completeDownload"
+
+
+def complete_download_form(page_html: str, page_url: str) -> tuple[str, dict]:
+    page = html.fromstring(page_html)
+    trigger = page.xpath(
+        f'//*[@id="{COMPLETE_DOWNLOAD_CONTROL.replace("$", "_")}"]'
+    )
+    if not trigger:
+        raise ValueError("The public portal did not offer the complete archive")
+    forms = page.xpath('//form[@name="main_form"]')
+    if not forms:
+        raise ValueError("The public portal download form was not found")
+    form = forms[0]
+    action = form_action(form, page_url)
+    data = form_fields(form)
+    data["PRADO_POSTBACK_TARGET"] = COMPLETE_DOWNLOAD_CONTROL
+    data["PRADO_POSTBACK_PARAMETER"] = ""
+    return action, data
+
+
+def is_archive_response(response, first_chunk: bytes) -> bool:
+    media_type = response.headers.get("content-type", "").split(";", 1)[0].lower()
+    return first_chunk.startswith(b"PK") or "zip" in media_type
+
+
+def portal_page_text(response, first_chunk: bytes, iterator) -> str:
+    chunks: list[bytes] = []
+    total = 0
+    for chunk in itertools.chain((first_chunk,), iterator):
+        total += len(chunk)
+        if total > MAX_PORTAL_PAGE_BYTES:
+            raise ValueError("The public portal returned an unexpected response")
+        chunks.append(chunk)
+    return b"".join(chunks).decode(response.encoding or "utf-8", "replace")
+
+
 def download_anonymous_archive(url: str):
     with httpx.Client(
         timeout=90,
@@ -956,12 +1024,33 @@ def download_anonymous_archive(url: str):
             response.raise_for_status()
             iterator = response.iter_bytes()
             first_chunk = next(iterator, b"")
-            media_type = response.headers.get("content-type", "").split(";", 1)[0]
-            if not first_chunk.startswith(b"PK") and "zip" not in media_type:
+            if is_archive_response(response, first_chunk):
+                return buffer_document(first_chunk, iterator, MAX_ARCHIVE_BYTES)
+            # The anonymous request is accepted with a confirmation page whose
+            # download control posts back the archive itself.
+            confirmation_url = str(response.url)
+            confirmation_html = portal_page_text(response, first_chunk, iterator)
+        finally:
+            response.close()
+
+        action, data = complete_download_form(confirmation_html, confirmation_url)
+        client.headers["Referer"] = confirmation_url
+        archive = portal_request(
+            action,
+            method="POST",
+            data=data,
+            stream=True,
+            client=client,
+        )
+        try:
+            archive.raise_for_status()
+            iterator = archive.iter_bytes()
+            first_chunk = next(iterator, b"")
+            if not is_archive_response(archive, first_chunk):
                 raise ValueError("The public portal did not return a ZIP archive")
             return buffer_document(first_chunk, iterator, MAX_ARCHIVE_BYTES)
         finally:
-            response.close()
+            archive.close()
 
 
 def safe_archive_path(filename: str) -> PurePosixPath:

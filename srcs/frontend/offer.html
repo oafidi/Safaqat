@@ -61,7 +61,7 @@
 
           <section id="document-viewer" class="hidden overflow-hidden rounded-2xl border border-slate-300 bg-white" aria-labelledby="viewer-title">
             <div class="flex items-center justify-between gap-4 border-b border-slate-200 px-5 py-4"><div class="min-w-0"><h2 id="viewer-title" class="truncate font-bold">Document</h2><p class="text-xs text-slate-600">Aperçu sécurisé du fichier</p></div><button id="close-viewer" class="button-secondary size-11 shrink-0 p-0" type="button" aria-label="Fermer le document"><svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
-            <iframe id="pdf-frame" class="h-[70vh] min-h-[520px] w-full bg-slate-100" title="Aperçu du document" sandbox></iframe>
+            <iframe id="pdf-frame" class="h-[70vh] min-h-[520px] w-full bg-slate-100" title="Aperçu du document" referrerpolicy="no-referrer"></iframe>
           </section>
         </div>
 
