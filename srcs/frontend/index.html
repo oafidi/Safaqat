@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Safaqat sélectionne les marchés publics pertinents pour votre entreprise.">
+  <title>Connexion — Safaqat</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="min-h-screen p-3 sm:p-6 lg:grid lg:place-items-center">
+    <section class="mx-auto grid w-full max-w-6xl overflow-hidden rounded-2xl bg-white shadow-[0_24px_70px_rgba(23,32,51,.12)] lg:min-h-[700px] lg:grid-cols-[.82fr_1.18fr]">
+      <aside class="auth-pattern relative flex min-w-0 flex-col justify-between overflow-hidden p-6 text-white sm:p-8 lg:p-12">
+        <a href="/" class="relative z-10 flex w-fit items-center gap-3 rounded-lg">
+          <span class="grid size-11 place-items-center rounded-xl bg-white text-xl font-bold text-[#922720]">S</span>
+          <span class="brand text-2xl font-bold">Safaqat</span>
+        </a>
+        <div class="relative z-10 my-8 max-w-sm lg:my-12">
+          <h1 id="auth-side-title" class="text-balance text-3xl font-bold leading-tight tracking-[-.025em] sm:text-4xl lg:text-5xl">Vos prochains marchés, déjà triés.</h1>
+          <p id="auth-side-copy" class="mt-4 max-w-[42ch] text-base leading-7 text-[#fff3f1]">Connectez-vous pour retrouver les opportunités actives qui correspondent à votre activité.</p>
+        </div>
+        <p class="relative z-10 hidden max-w-xs text-sm leading-6 text-[#ffe4e1] lg:block">Vos critères servent uniquement à sélectionner et expliquer vos recommandations.</p>
+        <div class="absolute -bottom-32 -right-24 size-72 rounded-full border-[42px] border-white/10" aria-hidden="true"></div>
+      </aside>
+
+      <div class="flex min-w-0 items-start p-5 sm:p-8 lg:items-center lg:p-12">
+        <div class="mx-auto w-full min-w-0 max-w-xl">
+          <div class="mb-7 grid grid-cols-2 rounded-xl bg-slate-100 p-1" role="tablist" aria-label="Authentification">
+            <button id="signin-tab" role="tab" aria-selected="true" aria-controls="signin-form" class="min-h-11 rounded-lg bg-white px-3 text-sm font-bold text-slate-900 shadow-sm" type="button">Se connecter</button>
+            <button id="signup-tab" role="tab" aria-selected="false" aria-controls="signup-form" class="min-h-11 rounded-lg px-3 text-sm font-bold text-slate-600" type="button">Créer mon profil</button>
+          </div>
+          <div id="form-message" class="mb-5 hidden rounded-xl border px-4 py-3 text-sm" role="alert" aria-live="assertive"></div>
+
+          <form id="signin-form" role="tabpanel" aria-labelledby="signin-tab" class="space-y-5" novalidate>
+            <div><h2 class="text-3xl font-bold tracking-[-.025em]">Ravi de vous revoir</h2><p class="mt-2 text-slate-600">Accédez à votre sélection d’appels d’offres.</p></div>
+            <label class="block"><span class="mb-2 block text-sm font-bold text-slate-700">Adresse e-mail professionnelle</span><input id="signin-email" name="email" type="email" autocomplete="email" required placeholder="contact@entreprise.ma" class="field"><span class="field-error mt-1 hidden"></span></label>
+            <label class="block"><span class="mb-2 block text-sm font-bold text-slate-700">Mot de passe</span><input id="signin-password" name="password" type="password" autocomplete="current-password" required placeholder="Votre mot de passe" class="field"><span class="field-error mt-1 hidden"></span></label>
+            <button class="button-primary submit-button w-full" type="submit"><span>Se connecter</span></button>
+          </form>
+
+          <form id="signup-form" role="tabpanel" aria-labelledby="signup-tab" class="hidden" novalidate>
+            <div class="mb-7">
+              <div class="flex items-center justify-between gap-3"><div><h2 class="text-2xl font-bold tracking-[-.02em]">Créer votre profil de veille</h2><p id="step-label" class="mt-1 text-sm font-semibold text-[#922720]">Étape 1 sur 4 · Votre compte</p></div><span id="step-percent" class="text-sm font-bold tabular-nums text-slate-600">25 %</span></div>
+              <div class="mt-4 h-2 overflow-hidden rounded-full bg-slate-200" role="progressbar" aria-valuemin="1" aria-valuemax="4" aria-valuenow="1" aria-label="Progression de l’inscription"><div id="signup-progress" class="h-full w-1/4 rounded-full bg-[#b9342d] transition-[width] duration-300"></div></div>
+            </div>
+
+            <section class="signup-step space-y-4" data-step="0">
+              <p class="max-w-[60ch] text-sm leading-6 text-slate-600">Commencez par les informations nécessaires pour sécuriser votre accès.</p>
+              <label class="block"><span class="mb-2 block text-sm font-bold text-slate-700">Nom de l’entreprise</span><input id="enterprise-name" name="enterprise_name" required maxlength="200" autocomplete="organization" placeholder="Exemple SARL" class="field"><span class="field-error mt-1 hidden"></span></label>
+              <label class="block"><span class="mb-2 block text-sm font-bold text-slate-700">Adresse e-mail</span><input id="signup-email" name="email" type="email" autocomplete="email" required placeholder="contact@exemple.ma" class="field"><span class="field-error mt-1 hidden"></span></label>
+              <div class="grid gap-4 sm:grid-cols-2"><label class="block"><span class="mb-2 block text-sm font-bold text-slate-700">Mot de passe</span><input id="signup-password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required placeholder="8 caractères minimum" class="field"><span class="field-error mt-1 hidden"></span></label><label class="block"><span class="mb-2 block text-sm font-bold text-slate-700">Confirmer</span><input id="password-confirm" name="password_confirm" type="password" autocomplete="new-password" required placeholder="Répétez le mot de passe" class="field"><span class="field-error mt-1 hidden"></span></label></div>
+            </section>
+
+            <section class="signup-step hidden space-y-4" data-step="1">
+              <p class="max-w-[60ch] text-sm leading-6 text-slate-600">Décrivez votre savoir-faire. Safaqat s’en sert pour comprendre votre activité, jamais pour publier ces informations.</p>
+              <label class="block"><span class="mb-2 block text-sm font-bold text-slate-700">Activité de l’entreprise</span><textarea id="description" name="description" required maxlength="5000" rows="5" placeholder="Ex. Installation et maintenance de réseaux informatiques…" class="field resize-y"></textarea><span class="field-error mt-1 hidden"></span></label>
+              <details class="border-y border-slate-200 py-4"><summary class="cursor-pointer font-bold text-slate-700">Informations administratives facultatives</summary><div class="mt-4 grid gap-4 sm:grid-cols-2"><label class="block"><span class="mb-2 block text-sm font-bold text-slate-700">Téléphone</span><input name="phone" type="tel" maxlength="30" autocomplete="tel" placeholder="+212 600 000 000" class="field"></label><label class="block"><span class="mb-2 block text-sm font-bold text-slate-700">Identifiant légal / ICE</span><input name="legal_identifier" maxlength="100" placeholder="001234567890" class="field"></label></div></details>
+            </section>
+
+            <section class="signup-step hidden space-y-5" data-step="2">
+              <p class="max-w-[60ch] text-sm leading-6 text-slate-600">Ces critères déterminent les offres proposées. Vous pourrez les modifier depuis le tableau de bord.</p>
+              <div><label for="keywords-input" class="mb-2 block text-sm font-bold text-slate-700">Mots-clés métier</label><div id="keywords-tags" class="flex min-h-12 flex-wrap items-center gap-2 rounded-xl border border-slate-300 bg-white p-2 focus-within:border-[#b9342d] focus-within:ring-4 focus-within:ring-red-900/10"><input id="keywords-input" class="min-w-36 flex-1 border-0 px-2 py-1 outline-none" placeholder="Tapez puis Entrée" autocomplete="off"></div><p class="mt-1 text-xs text-slate-600">Ex. câblage réseau, maintenance informatique. Entrée ou virgule pour ajouter.</p><span id="keywords-error" class="field-error mt-1 hidden"></span></div>
+              <fieldset><legend class="mb-2 text-sm font-bold text-slate-700">Catégories recherchées</legend><div class="grid gap-2 sm:grid-cols-3"><label class="flex min-h-12 cursor-pointer items-center gap-2 rounded-xl border border-slate-300 px-3 font-semibold hover:border-[#b9342d]"><input type="checkbox" name="categories" value="travaux" class="size-4 accent-[#b9342d]"> Travaux</label><label class="flex min-h-12 cursor-pointer items-center gap-2 rounded-xl border border-slate-300 px-3 font-semibold hover:border-[#b9342d]"><input type="checkbox" name="categories" value="services" class="size-4 accent-[#b9342d]"> Services</label><label class="flex min-h-12 cursor-pointer items-center gap-2 rounded-xl border border-slate-300 px-3 font-semibold hover:border-[#b9342d]"><input type="checkbox" name="categories" value="fournitures" class="size-4 accent-[#b9342d]"> Fournitures</label></div><span id="categories-error" class="field-error mt-1 hidden"></span></fieldset>
+              <div><label for="locations-input" class="mb-2 block text-sm font-bold text-slate-700">Villes ou zones</label><div id="locations-tags" class="flex min-h-12 flex-wrap items-center gap-2 rounded-xl border border-slate-300 bg-white p-2 focus-within:border-[#b9342d] focus-within:ring-4 focus-within:ring-red-900/10"><input id="locations-input" class="min-w-36 flex-1 border-0 px-2 py-1 outline-none" list="moroccan-cities" placeholder="Tapez puis Entrée" autocomplete="off"></div><datalist id="moroccan-cities"><option value="Casablanca"><option value="Rabat"><option value="Marrakech"><option value="Tanger"><option value="Fès"><option value="Agadir"><option value="Kénitra"><option value="Tétouan"></datalist><span id="locations-error" class="field-error mt-1 hidden"></span></div>
+            </section>
+
+            <section class="signup-step hidden space-y-5" data-step="3"><div class="rounded-xl bg-slate-100 p-5"><h3 class="text-lg font-bold">Vérifiez votre profil</h3><div id="signup-review" class="mt-4 grid gap-4 text-sm sm:grid-cols-2"></div></div><p class="text-sm leading-6 text-slate-600">En créant votre profil, vous acceptez que ces critères soient utilisés pour générer vos recommandations Safaqat.</p></section>
+
+            <div class="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between"><button id="signup-back" class="button-secondary hidden" type="button">Retour</button><button id="signup-next" class="button-primary sm:ml-auto" type="button">Continuer</button><button id="signup-submit" class="button-primary submit-button hidden sm:ml-auto" type="submit">Créer mon profil</button></div>
+          </form>
+        </div>
+      </div>
+    </section>
+  </main>
+  <script src="auth.js" defer></script>
+</body>
+</html>

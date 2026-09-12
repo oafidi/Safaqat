@@ -1,0 +1,60 @@
+services:
+  auth:
+    build: srcs/auth
+    env_file:
+      - .env
+    restart: unless-stopped
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+
+  scraper:
+    build: srcs/scrapper
+    restart: unless-stopped
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    restart: unless-stopped
+    volumes:
+      - qdrant_storage:/qdrant/storage
+
+  matching:
+    build: srcs/matching
+    environment:
+      AUTH_URL: http://auth:8000
+      FASTEMBED_CACHE_PATH: /app/model-cache
+      HF_HUB_DISABLE_XET: "1"
+    restart: unless-stopped
+    depends_on:
+      - auth
+      - qdrant
+    volumes:
+      - ./data:/app/data
+      - model_cache:/app/model-cache
+
+  docs-parser:
+    build: srcs/docs_parser
+    restart: unless-stopped
+    shm_size: "1gb"
+    gpus: all
+    environment:
+      CUDA_VISIBLE_DEVICES: "0"
+    volumes:
+      - docparser_models:/models
+
+  frontend:
+    build: srcs/frontend
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    depends_on:
+      - auth
+      - matching
+
+volumes:
+  qdrant_storage:
+  model_cache:
+  docparser_models:

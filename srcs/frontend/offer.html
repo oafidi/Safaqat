@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Consultez les informations et les documents d’un marché public sélectionné par Safaqat.">
+  <title>Offre — Safaqat</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="sticky top-0 z-30 border-b border-slate-200 bg-white">
+    <div class="mx-auto flex min-h-20 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+      <a href="/dashboard.html" class="flex shrink-0 items-center gap-3 rounded-lg"><span class="grid size-10 place-items-center rounded-xl bg-[#b9342d] text-lg font-bold text-white">S</span><span class="brand text-xl font-bold">Safaqat</span></a>
+      <div class="flex min-w-0 items-center gap-2 sm:gap-3"><div class="hidden min-w-0 text-right sm:block"><p id="header-enterprise-name" class="truncate text-sm font-bold"></p><p id="header-enterprise-email" class="truncate text-xs text-slate-600"></p></div><button id="logout-button" class="button-secondary shrink-0" type="button"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/></svg><span class="hidden sm:inline">Se déconnecter</span><span class="sr-only sm:hidden">Se déconnecter</span></button></div>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-9">
+    <a href="/dashboard.html" class="inline-flex min-h-11 items-center gap-2 rounded-lg font-bold text-slate-700 underline-offset-4 hover:text-[#922720] hover:underline"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M19 12H5m6-6l-6 6 6 6"/></svg>Retour aux opportunités</a>
+
+    <div id="offer-loading" class="mt-5" aria-live="polite">
+      <span class="sr-only">Chargement de l’offre et recherche des documents…</span>
+      <div class="h-48 animate-pulse rounded-2xl bg-white"></div>
+      <div class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.7fr)_minmax(300px,.8fr)]"><div class="h-96 animate-pulse rounded-2xl bg-white"></div><div class="h-72 animate-pulse rounded-2xl bg-white"></div></div>
+    </div>
+
+    <section id="offer-error" class="mt-5 hidden rounded-2xl border border-red-300 bg-red-50 p-6 text-red-950" role="alert">
+      <h1 class="text-xl font-bold">Impossible d’ouvrir cette offre</h1>
+      <p id="offer-error-copy" class="mt-2 max-w-[65ch] leading-6"></p>
+      <div class="mt-5 flex flex-wrap gap-3"><button id="retry-button" class="button-primary" type="button">Réessayer</button><a href="/dashboard.html" class="button-secondary">Retour au tableau de bord</a></div>
+    </section>
+
+    <div id="offer-content" class="hidden">
+      <section class="mt-5 overflow-hidden rounded-2xl bg-[#172033] text-white">
+        <div class="grid lg:grid-cols-[minmax(0,1fr)_300px]">
+          <div class="p-6 sm:p-8 lg:p-10"><div class="flex flex-wrap items-center gap-2"><span id="offer-category" class="chip bg-white text-[#172033]"></span><span id="offer-reference" class="text-sm font-semibold text-slate-300"></span></div><h1 id="offer-title" class="mt-5 max-w-4xl text-balance text-2xl font-bold leading-tight tracking-[-.025em] sm:text-3xl lg:text-4xl"></h1><p id="offer-buyer" class="mt-4 max-w-3xl text-lg font-semibold text-slate-200"></p></div>
+          <div class="border-t border-white/15 bg-white/[.06] p-6 sm:p-8 lg:border-l lg:border-t-0"><p class="text-sm font-bold text-slate-300">Date limite de dépôt</p><p id="offer-deadline" class="mt-2 text-2xl font-bold tabular-nums"></p><p id="offer-urgency" class="mt-2 text-sm font-bold text-[#ffc8c2]"></p><a id="official-offer-link" class="mt-6 inline-flex min-h-11 items-center gap-2 rounded-xl bg-white px-4 py-2 font-bold text-[#172033] hover:bg-slate-100" target="_blank" rel="noopener noreferrer">Voir l’annonce officielle<svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 3h7v7M10 14L21 3M21 14v5a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h5"/></svg></a></div>
+        </div>
+      </section>
+
+      <div class="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1.7fr)_minmax(300px,.8fr)]">
+        <div class="min-w-0 space-y-6">
+          <section class="rounded-2xl border border-slate-200 bg-white p-5 sm:p-7" aria-labelledby="information-title">
+            <h2 id="information-title" class="text-xl font-bold">Informations de l’offre</h2>
+            <dl id="offer-metadata" class="mt-5 grid gap-x-8 gap-y-5 border-t border-slate-200 pt-5 sm:grid-cols-2"></dl>
+          </section>
+
+          <section class="rounded-2xl border border-slate-200 bg-white p-5 sm:p-7" aria-labelledby="documents-title">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between"><div><h2 id="documents-title" class="text-xl font-bold">Documents de consultation</h2><p class="mt-1 text-sm leading-6 text-slate-600">Les fichiers directs s’ouvrent ici. Certains dossiers nécessitent vos informations sur le portail officiel.</p></div><span id="documents-count" class="text-sm font-bold text-[#922720]"></span></div>
+            <div id="documents-message" class="mt-5 hidden rounded-xl border px-4 py-3 text-sm" role="alert" aria-live="assertive"></div>
+            <div id="portal-consent" class="mt-5 hidden rounded-2xl bg-amber-50 p-5 text-amber-950" aria-labelledby="portal-consent-title">
+              <h3 id="portal-consent-title" class="text-lg font-bold">Autoriser le téléchargement automatique</h3>
+              <p class="mt-2 text-sm leading-6">Safaqat utilisera le mode anonyme du portail pour télécharger et extraire le dossier. Vous ne recevrez donc pas directement les notifications de modification envoyées par le portail.</p>
+              <p class="mt-3 text-sm leading-6 text-slate-700">Cette autorisation sera enregistrée pour votre entreprise et s’appliquera à tous les dossiers téléchargés automatiquement.</p>
+              <label class="mt-4 flex cursor-pointer items-start gap-3 rounded-xl bg-white p-3"><input id="portal-consent-checkbox" type="checkbox" class="mt-1 size-4 accent-[#b9342d]"><span class="text-sm leading-6">Je reconnais avoir lu les <a class="font-bold text-[#9f2f29] underline decoration-[#d8a6a2] underline-offset-2 hover:text-[#77231f]" href="https://www.marchespublics.gov.ma/index.php?page=commun.ConditionsUtilisation&amp;calledFrom=entreprise" target="_blank" rel="noopener noreferrer">conditions d’utilisation officielles</a> et j’autorise Safaqat à les accepter pour les téléchargements anonymes de mon entreprise.</span></label>
+              <button id="portal-consent-button" class="button-primary mt-4" type="button" disabled>Accepter et préparer les documents</button>
+            </div>
+            <div id="documents-list" class="mt-5 divide-y divide-slate-200 border-y border-slate-200"></div>
+            <div id="documents-empty" class="mt-5 hidden rounded-xl bg-slate-100 px-5 py-8 text-center"><h3 class="font-bold">Aucun document public détecté</h3><p class="mt-1 text-sm text-slate-600">Consultez l’annonce officielle pour vérifier les pièces disponibles.</p></div>
+          </section>
+
+          <section id="document-viewer" class="hidden overflow-hidden rounded-2xl border border-slate-300 bg-white" aria-labelledby="viewer-title">
+            <div class="flex items-center justify-between gap-4 border-b border-slate-200 px-5 py-4"><div class="min-w-0"><h2 id="viewer-title" class="truncate font-bold">Document</h2><p class="text-xs text-slate-600">Aperçu sécurisé du fichier</p></div><button id="close-viewer" class="button-secondary size-11 shrink-0 p-0" type="button" aria-label="Fermer le document"><svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+            <iframe id="pdf-frame" class="h-[70vh] min-h-[520px] w-full bg-slate-100" title="Aperçu du document" sandbox></iframe>
+          </section>
+        </div>
+
+        <aside class="space-y-6 lg:sticky lg:top-24">
+          <section class="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6" aria-labelledby="summary-title">
+            <div class="flex items-center justify-between gap-3"><h2 id="summary-title" class="text-xl font-bold">Synthèse</h2><span class="chip bg-amber-50 text-amber-900">Prochaine étape</span></div>
+            <p class="mt-4 leading-6 text-slate-600">La synthèse automatique présentera bientôt les exigences, dates, pièces et critères importants de cette offre.</p>
+            <div class="mt-5 space-y-3" aria-hidden="true"><div class="h-3 w-full rounded bg-slate-200"></div><div class="h-3 w-5/6 rounded bg-slate-200"></div><div class="h-3 w-2/3 rounded bg-slate-200"></div></div>
+          </section>
+
+          <section class="rounded-2xl bg-[#172033] p-5 text-white sm:p-6" aria-labelledby="chat-title">
+            <h2 id="chat-title" class="text-xl font-bold">Questions sur l’offre</h2>
+            <p class="mt-3 text-sm leading-6 text-slate-300">Le chat sera activé lorsque l’analyse des documents sera connectée. Les réponses citeront leurs pages sources.</p>
+            <label for="question-input" class="mt-5 block text-sm font-bold text-slate-200">Votre question</label>
+            <textarea id="question-input" class="mt-2 min-h-28 w-full resize-none rounded-xl border border-white/20 bg-white/10 p-3 text-white placeholder:text-slate-400" disabled placeholder="Ex. Quelles sont les pièces administratives exigées ?"></textarea>
+            <button class="mt-3 min-h-11 w-full rounded-xl bg-white/15 px-4 py-2 font-bold text-slate-300" type="button" disabled>Envoyer la question</button>
+          </section>
+        </aside>
+      </div>
+    </div>
+  </main>
+  <script src="offer.js" defer></script>
+</body>
+</html>

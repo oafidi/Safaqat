@@ -1,0 +1,30 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Runtime data
+data/
+logs/
+*.db
+*.db-shm
+*.db-wal
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Local AI/editor state
+.agent/
+.agents/
+.claude/
+.codex/
+.gemini/
+.impeccable/
+
+# Model and build caches
+model-cache/
+models/
+*.egg-info/
