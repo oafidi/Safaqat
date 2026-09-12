@@ -8,6 +8,8 @@ let viewerTrigger = null;
 const MOROCCO_TIME_ZONE = "Africa/Casablanca";
 
 document.querySelectorAll(".hidden").forEach((element) => {
+  // Responsive utilities (hidden sm:inline) stay class-driven; only JS-toggled nodes convert.
+  if (/\b(sm|md|lg|xl):(inline|block|flex|grid|inline-flex|inline-block)\b/.test(element.className)) return;
   element.hidden = true;
   element.classList.remove("hidden");
 });
@@ -71,7 +73,7 @@ function portalFallbackMessage(message) {
 
 function setDocumentMessage(message = "", type = "info") {
   elements.documentsMessage.textContent = message;
-  elements.documentsMessage.className = `mt-5 rounded-xl border px-4 py-3 text-sm ${type === "error" ? "border-red-300 bg-red-50 text-red-950" : "border-amber-300 bg-amber-50 text-amber-950"}`;
+  elements.documentsMessage.className = `notice mt-6 ${type === "error" ? "notice-error" : "notice-warning"}`;
   elements.documentsMessage.hidden = !message;
 }
 
@@ -79,8 +81,8 @@ function metadataItem(label, value) {
   const wrapper = document.createElement("div");
   const term = document.createElement("dt");
   const description = document.createElement("dd");
-  term.className = "text-xs font-bold uppercase tracking-wide text-slate-600";
-  description.className = "mt-1 font-semibold leading-6 text-slate-900";
+  term.className = "label";
+  description.className = "mt-1.5 text-small";
   term.textContent = label;
   description.textContent = value || "Non renseigné";
   wrapper.append(term, description);
@@ -89,10 +91,10 @@ function metadataItem(label, value) {
 
 function documentIcon(type) {
   const wrapper = document.createElement("span");
-  wrapper.className = "grid size-11 shrink-0 place-items-center rounded-xl bg-red-50 text-[#922720]";
+  wrapper.className = "grid size-9 shrink-0 place-items-center rounded-sm bg-canvas-sunken text-accent-hover";
   wrapper.innerHTML = type === "pdf"
-    ? '<svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 2h8l4 4v16H6zM14 2v5h5M9 14h6M9 18h4"/></svg>'
-    : '<svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 7h6l2 2h8v11H4zM4 7V4h6l2 3"/></svg>';
+    ? '<svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 2h8l4 4v16H6zM14 2v5h5M9 14h6M9 18h4"/></svg>'
+    : '<svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 7h6l2 2h8v11H4zM4 7V4h6l2 3"/></svg>';
   return wrapper;
 }
 
@@ -130,32 +132,32 @@ function renderDocuments(documents, extracted = false) {
 
   documents.forEach((item) => {
     const row = document.createElement("article");
-    row.className = "flex flex-col gap-4 py-5 sm:flex-row sm:items-center";
+    row.className = "list-row flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-6";
     const identity = window.document.createElement("div");
     identity.className = "flex min-w-0 flex-1 items-center gap-3";
     const copy = window.document.createElement("div");
     copy.className = "min-w-0";
     const title = window.document.createElement("h3");
-    title.className = "break-words font-bold leading-6";
+    title.className = "break-words text-small font-medium leading-6";
     title.textContent = item.name;
     const type = window.document.createElement("p");
-    type.className = "mt-1 text-sm text-slate-600";
+    type.className = "numeric mt-0.5 text-ink-faint";
     type.textContent = fileTypeLabel(item);
     copy.append(title, type);
     identity.append(documentIcon(item.media_type === "application/pdf" ? "pdf" : item.file_type), copy);
 
     const actions = window.document.createElement("div");
-    actions.className = "flex shrink-0 flex-wrap gap-2 sm:justify-end";
+    actions.className = "flex shrink-0 flex-wrap gap-3 sm:justify-end";
     if (extracted) {
       const open = window.document.createElement("button");
       open.type = "button";
-      open.className = "button-primary";
+      open.className = "button-secondary";
       open.textContent = "Voir le contenu";
       open.addEventListener("click", () => openDocument(item, open, true));
       actions.append(open);
     } else if (item.requires_portal && item.portal_url) {
       const download = window.document.createElement("a");
-      download.className = "button-primary";
+      download.className = "button-secondary";
       download.href = item.portal_url;
       download.target = "_blank";
       download.rel = "noopener noreferrer";
@@ -164,14 +166,14 @@ function renderDocuments(documents, extracted = false) {
     } else {
       const open = window.document.createElement("button");
       open.type = "button";
-      open.className = "button-primary";
+      open.className = "button-secondary";
       open.textContent = "Ouvrir";
       open.addEventListener("click", () => openDocument(item, open));
       actions.append(open);
     }
     if (item.portal_url && !item.requires_portal) {
       const portal = window.document.createElement("a");
-      portal.className = "button-secondary";
+      portal.className = "button-ghost";
       portal.href = item.portal_url;
       portal.target = "_blank";
       portal.rel = "noopener noreferrer";

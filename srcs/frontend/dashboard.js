@@ -3,7 +3,12 @@ const AUTH_API = "/api/auth";
 const token = sessionStorage.getItem("access_token");
 const MOROCCO_TIME_ZONE = "Africa/Casablanca";
 let enterprise = readJson(sessionStorage.getItem("enterprise"));
-document.querySelectorAll(".hidden").forEach((element) => { element.hidden = true; element.classList.remove("hidden"); });
+document.querySelectorAll(".hidden").forEach((element) => {
+  // Responsive utilities (hidden sm:inline) stay class-driven; only JS-toggled nodes convert.
+  if (/\b(sm|md|lg|xl):(inline|block|flex|grid|inline-flex|inline-block)\b/.test(element.className)) return;
+  element.hidden = true;
+  element.classList.remove("hidden");
+});
 if (!token || !enterprise) window.location.replace("/");
 
 const elements = {
@@ -28,7 +33,7 @@ function persistOfferState() { localStorage.setItem("safaqat_saved",JSON.stringi
 
 function setMessage(text="") {
   elements.message.textContent=text;
-  elements.message.className="mt-5 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900";
+  elements.message.className="notice notice-error mt-6";
   elements.message.hidden=!text;
 }
 
@@ -37,7 +42,7 @@ function showToast(message, undoId=null) {
   clearTimeout(toastTimer);
   elements.toast.innerHTML="";
   const text=document.createElement("span"); text.textContent=message; elements.toast.append(text);
-  if (undoId) { const button=document.createElement("button"); button.className="ml-3 font-bold underline underline-offset-4"; button.textContent="Annuler"; button.addEventListener("click",()=>{dismissed.delete(undoId);persistOfferState();renderOffers();elements.toast.hidden=true;}); elements.toast.append(button); }
+  if (undoId) { const button=document.createElement("button"); button.className="ml-3 font-medium underline underline-offset-4"; button.textContent="Annuler"; button.addEventListener("click",()=>{dismissed.delete(undoId);persistOfferState();renderOffers();elements.toast.hidden=true;}); elements.toast.append(button); }
   elements.toast.hidden=false;
   toastTimer=setTimeout(()=>elements.toast.hidden=true,5000);
 }
@@ -47,7 +52,7 @@ function renderIdentity() {
   document.querySelector("#header-enterprise-name").textContent=enterprise.enterprise_name;
   document.querySelector("#header-enterprise-email").textContent=enterprise.email;
   const groups=[["profile-keywords",enterprise.keywords],["profile-categories",enterprise.categories],["profile-locations",enterprise.locations]];
-  groups.forEach(([id,values])=>{ const node=document.querySelector(`#${id}`); node.innerHTML=(values||[]).map((value)=>`<span class="chip bg-slate-100 text-slate-700">${escapeHtml(value)}</span>`).join("")||'<span class="text-sm text-slate-600">Non renseigné</span>'; });
+  groups.forEach(([id,values])=>{ const node=document.querySelector(`#${id}`); node.innerHTML=(values||[]).map((value)=>`<span class="chip chip-neutral">${escapeHtml(value)}</span>`).join("")||'<span class="text-small text-ink-faint">Non renseigné</span>'; });
 }
 
 function translateReason(reason) {
@@ -67,8 +72,9 @@ function deadlineInfo(raw) {
   if (!match) return {timestamp:Number.MAX_SAFE_INTEGER,label:raw||"Non précisée",urgency:""};
   const date=dateInTimeZone(Number(match[3]),Number(match[2]),Number(match[1]),Number(match[4]||23),Number(match[5]||59));
   const days=Math.ceil((date-Date.now())/86400000);
-  let urgency=days<=1?"Dernier jour":days<=7?`${days} jours restants`:days<=30?`${days} jours restants`:"";
-  return {timestamp:date.getTime(),label:new Intl.DateTimeFormat("fr-MA",{timeZone:MOROCCO_TIME_ZONE,day:"numeric",month:"short",year:"numeric"}).format(date),urgency};
+  let urgency=days<=1?"Dernier jour":days<=30?`${days} jours restants`:"";
+  const tone=days<=1?"chip-error":days<=7?"chip-warning":"chip-neutral";
+  return {timestamp:date.getTime(),label:new Intl.DateTimeFormat("fr-MA",{timeZone:MOROCCO_TIME_ZONE,day:"numeric",month:"short",year:"numeric"}).format(date),urgency,tone};
 }
 
 function dateInTimeZone(year,month,day,hour,minute) {
@@ -93,13 +99,32 @@ function filteredOffers() {
 
 function offerCard(offer) {
   const deadline=deadlineInfo(offer.deadline);
-  const reasons=(offer.reasons||[]).slice(0,3).map((reason)=>`<span class="chip bg-emerald-50 text-emerald-800">${escapeHtml(translateReason(reason))}</span>`).join("");
+  const reasons=(offer.reasons||[]).slice(0,3).map((reason)=>`<span class="chip chip-neutral">${escapeHtml(translateReason(reason))}</span>`).join("");
   const isSaved=saved.has(offer.offer_id);
-  return `<article class="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6" data-id="${escapeHtml(offer.offer_id)}">
-    <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-      <div class="min-w-0 flex-1"><div class="flex flex-wrap items-center gap-2"><span class="chip bg-[#172033] text-white">N° ${offer.originalRank}</span><span class="chip bg-red-50 text-[#85231d]">${escapeHtml(offer.category||"Offre")}</span>${offer.reference?`<span class="text-sm font-semibold text-slate-600">Réf. ${escapeHtml(offer.reference)}</span>`:""}</div><h3 class="mt-4 text-xl font-bold leading-7 tracking-[-.015em]">${escapeHtml(offer.objet||"Objet non renseigné")}</h3><p class="mt-2 font-semibold text-slate-600">${escapeHtml(offer.buyer||"Acheteur non renseigné")}</p><div class="mt-4 flex flex-wrap gap-2">${reasons}</div></div>
-      <div class="grid shrink-0 grid-cols-2 gap-3 lg:w-72"><div class="rounded-xl bg-slate-100 p-3"><p class="text-xs font-bold uppercase tracking-wide text-slate-600">Lieu</p><p class="mt-1 font-bold">${escapeHtml(offer.location||"Non précisé")}</p></div><div class="rounded-xl bg-slate-100 p-3"><p class="text-xs font-bold uppercase tracking-wide text-slate-600">Date limite</p><p class="mt-1 font-bold tabular-nums">${escapeHtml(deadline.label)}</p>${deadline.urgency?`<p class="mt-1 text-xs font-bold text-[#922720]">${escapeHtml(deadline.urgency)}</p>`:""}</div></div>
-    </div><div class="mt-5 flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 pt-4"><button class="button-secondary" type="button" data-action="dismiss">Masquer</button><button class="button-secondary" type="button" data-action="save" aria-pressed="${isSaved}"><svg class="size-4" viewBox="0 0 24 24" fill="${isSaved?"currentColor":"none"}" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4z"/></svg>${isSaved?"Enregistrée":"Enregistrer"}</button>${offer.source_url?`<a class="button-secondary" href="${escapeHtml(offer.source_url)}" target="_blank" rel="noopener noreferrer">Source</a>`:""}<a class="button-primary" href="/offer.html?id=${encodeURIComponent(offer.offer_id)}">Voir l’offre</a></div>
+  const rank=String(offer.originalRank).padStart(2,"0");
+  return `<article class="offer-row" data-id="${escapeHtml(offer.offer_id)}">
+    <div class="flex flex-col gap-9 lg:flex-row lg:items-start lg:justify-between">
+      <div class="min-w-0 flex-1">
+        <div class="flex flex-wrap items-center gap-3">
+          <span class="numeric text-ink-faint">${rank}</span>
+          <span class="chip chip-accent">${escapeHtml(offer.category||"Offre")}</span>
+          ${offer.reference?`<span class="numeric text-ink-faint">Réf. ${escapeHtml(offer.reference)}</span>`:""}
+        </div>
+        <h3 class="mt-6 max-w-measure text-balance">${escapeHtml(offer.objet||"Objet non renseigné")}</h3>
+        <p class="mt-3 max-w-measure text-ink-muted">${escapeHtml(offer.buyer||"Acheteur non renseigné")}</p>
+        <div class="mt-6 flex flex-wrap gap-1.5">${reasons}</div>
+      </div>
+      <dl class="grid shrink-0 gap-6 border-t border-line pt-6 lg:w-64 lg:border-l lg:border-t-0 lg:pl-9 lg:pt-0">
+        <div><dt class="label">Lieu</dt><dd class="mt-1.5 line-clamp-3 text-small" title="${escapeHtml(offer.location||"Non précisé")}">${escapeHtml(offer.location||"Non précisé")}</dd></div>
+        <div><dt class="label">Date limite</dt><dd class="numeric mt-1.5">${escapeHtml(deadline.label)}</dd>${deadline.urgency?`<dd class="mt-1.5"><span class="chip ${deadline.tone}">${escapeHtml(deadline.urgency)}</span></dd>`:""}</div>
+      </dl>
+    </div>
+    <div class="mt-9 flex flex-wrap items-center justify-end gap-3 border-t border-line pt-6">
+      <button class="button-ghost" type="button" data-action="dismiss">Masquer</button>
+      <button class="button-secondary" type="button" data-action="save" aria-pressed="${isSaved}"><svg class="size-4" viewBox="0 0 24 24" fill="${isSaved?"currentColor":"none"}" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4z"/></svg>${isSaved?"Enregistrée":"Enregistrer"}</button>
+      ${offer.source_url?`<a class="button-secondary" href="${escapeHtml(offer.source_url)}" target="_blank" rel="noopener noreferrer">Source</a>`:""}
+      <a class="button-primary" href="/offer.html?id=${encodeURIComponent(offer.offer_id)}">Voir l’offre</a>
+    </div>
   </article>`;
 }
 
@@ -149,7 +174,7 @@ function openProfile(trigger) {
 function renderEditTags(kind) {
   const wrapper=document.querySelector(`#edit-${kind}-tags`); const input=document.querySelector(`#edit-${kind}-input`);
   wrapper.querySelectorAll("[data-edit-tag]").forEach((node)=>node.remove());
-  editTags[kind].forEach((value,index)=>{const chip=document.createElement("span");chip.dataset.editTag="";chip.className="chip bg-red-50 text-[#85231d]";const label=document.createElement("span");label.textContent=value;const remove=document.createElement("button");remove.type="button";remove.className="grid size-6 place-items-center rounded-full hover:bg-red-100";remove.setAttribute("aria-label",`Supprimer ${value}`);remove.textContent="×";remove.addEventListener("click",()=>{editTags[kind].splice(index,1);renderEditTags(kind);input.focus();});chip.append(label,remove);wrapper.insertBefore(chip,input);});
+  editTags[kind].forEach((value,index)=>{const chip=document.createElement("span");chip.dataset.editTag="";chip.className="chip chip-accent";const label=document.createElement("span");label.textContent=value;const remove=document.createElement("button");remove.type="button";remove.className="chip-remove";remove.setAttribute("aria-label",`Supprimer ${value}`);remove.textContent="×";remove.addEventListener("click",()=>{editTags[kind].splice(index,1);renderEditTags(kind);input.focus();});chip.append(label,remove);wrapper.insertBefore(chip,input);});
 }
 
 function addEditTag(kind) {
@@ -164,10 +189,10 @@ elements.profileForm.addEventListener("submit",async(event)=>{
   event.preventDefault(); const data=new FormData(elements.profileForm); const button=document.querySelector("#profile-submit"); const profileMessage=document.querySelector("#profile-message");
   addEditTag("keywords"); addEditTag("locations");
   const payload={enterprise_name:data.get("enterprise_name").trim(),description:data.get("description").trim(),phone:data.get("phone").trim()||null,legal_identifier:data.get("legal_identifier").trim()||null,keywords:editTags.keywords,categories:data.getAll("categories"),locations:editTags.locations};
-  if(!payload.keywords.length||!payload.categories.length||!payload.locations.length){profileMessage.textContent="Ajoutez au moins un mot-clé, une catégorie et une zone.";profileMessage.className="mt-5 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900";profileMessage.hidden=false;return;}
+  if(!payload.keywords.length||!payload.categories.length||!payload.locations.length){profileMessage.textContent="Ajoutez au moins un mot-clé, une catégorie et une zone.";profileMessage.className="notice notice-error mt-6";profileMessage.hidden=false;return;}
   button.disabled=true;button.textContent="Enregistrement…";
   try { const response=await fetch(`${AUTH_API}/profile`,{method:"PATCH",headers:{"Content-Type":"application/json",Authorization:`Bearer ${token}`},body:JSON.stringify(payload)}); let body={};try{body=await response.json();}catch(_){/* fallback */}if(response.status===401){logout();return;}if(!response.ok)throw new Error(body.detail||"La modification a échoué.");enterprise=body.enterprise;sessionStorage.setItem("enterprise",JSON.stringify(enterprise));renderIdentity();closeDialog(elements.profileModal);showToast("Profil mis à jour. Les offres vont être recalculées.");await loadOffers(); }
-  catch(error){profileMessage.textContent=`${error.message} Vérifiez les champs puis réessayez.`;profileMessage.className="mt-5 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900";profileMessage.hidden=false;}
+  catch(error){profileMessage.textContent=`${error.message} Vérifiez les champs puis réessayez.`;profileMessage.className="notice notice-error mt-6";profileMessage.hidden=false;}
   finally{button.disabled=false;button.textContent="Enregistrer et actualiser";}
 });
 

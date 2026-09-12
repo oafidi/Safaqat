@@ -9,13 +9,18 @@ const stepNames = ["Votre compte", "Votre activité", "Vos critères", "Vérific
 let currentStep = 0;
 const tags = { keywords: [], locations: [] };
 
-document.querySelectorAll(".hidden").forEach((element) => { element.hidden = true; element.classList.remove("hidden"); });
+document.querySelectorAll(".hidden").forEach((element) => {
+  // Responsive utilities (hidden sm:inline) stay class-driven; only JS-toggled nodes convert.
+  if (/\b(sm|md|lg|xl):(inline|block|flex|grid|inline-flex|inline-block)\b/.test(element.className)) return;
+  element.hidden = true;
+  element.classList.remove("hidden");
+});
 
 if (sessionStorage.getItem("access_token") && sessionStorage.getItem("enterprise")) window.location.replace("/dashboard.html");
 
 function setMessage(text = "", type = "error") {
   formMessage.textContent = text;
-  formMessage.className = `mb-5 rounded-xl border px-4 py-3 text-sm ${type === "success" ? "border-emerald-300 bg-emerald-50 text-emerald-900" : "border-red-300 bg-red-50 text-red-900"}`;
+  formMessage.className = `notice mb-6 ${type === "success" ? "notice-success" : "notice-error"}`;
   formMessage.hidden = !text;
 }
 
@@ -72,8 +77,8 @@ function toggleAuth(mode) {
   signupForm.hidden = signin;
   signinTab.setAttribute("aria-selected", String(signin));
   signupTab.setAttribute("aria-selected", String(!signin));
-  signinTab.className = `min-h-11 rounded-lg px-3 text-sm font-bold ${signin ? "bg-white text-slate-900 shadow-sm" : "text-slate-600"}`;
-  signupTab.className = `min-h-11 rounded-lg px-3 text-sm font-bold ${!signin ? "bg-white text-slate-900 shadow-sm" : "text-slate-600"}`;
+  signinTab.className = "chip-filter";
+  signupTab.className = "chip-filter";
   document.querySelector("#auth-side-title").textContent = signin ? "Vos prochains marchés, déjà triés." : "Construisez une veille qui vous ressemble.";
   document.querySelector("#auth-side-copy").textContent = signin ? "Connectez-vous pour retrouver les opportunités actives qui correspondent à votre activité." : "En quatre étapes courtes, indiquez votre métier et les marchés qui comptent pour vous.";
   setMessage();
@@ -87,8 +92,8 @@ function renderTags(kind) {
   tags[kind].forEach((value, index) => {
     const chip = document.createElement("span");
     chip.dataset.tag = "";
-    chip.className = "chip bg-red-50 text-[#85231d]";
-    chip.innerHTML = `<span></span><button type="button" class="grid size-6 place-items-center rounded-full hover:bg-red-100" aria-label="Supprimer ${value}">×</button>`;
+    chip.className = "chip chip-accent";
+    chip.innerHTML = `<span></span><button type="button" class="chip-remove" aria-label="Supprimer ${value}">×</button>`;
     chip.querySelector("span").textContent = value;
     chip.querySelector("button").addEventListener("click", () => { tags[kind].splice(index,1); renderTags(kind); saveDraft(); input.focus(); });
     wrapper.insertBefore(chip, input);
@@ -138,7 +143,7 @@ function updateStep() {
 function renderReview() {
   const data = new FormData(signupForm);
   const items = [["Entreprise",data.get("enterprise_name")],["E-mail",data.get("email")],["Activité",data.get("description")],["Mots-clés",tags.keywords.join(", ")],["Catégories",data.getAll("categories").join(", ")],["Zones",tags.locations.join(", ")]];
-  document.querySelector("#signup-review").innerHTML = items.map(([label,value]) => `<div><p class="font-bold text-slate-600">${label}</p><p class="mt-1 break-words text-slate-900"></p></div>`).join("");
+  document.querySelector("#signup-review").innerHTML = items.map(([label,value]) => `<div><p class="label">${label}</p><p class="mt-1.5 break-words text-small"></p></div>`).join("");
   [...document.querySelector("#signup-review").children].forEach((node,index) => node.lastElementChild.textContent = items[index][1]);
 }
 
